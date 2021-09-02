@@ -7,12 +7,8 @@ using TimexServerApp.Models;
 
 namespace TimexServerApp.DataAccess
 {
-    public partial class FullStackDBDemoContext : DbContext
+    public partial class FullStackDBDemoContext : DbContext, IFullStackDBDemoContext
     {
-        public FullStackDBDemoContext()
-        {
-        }
-
         public FullStackDBDemoContext(DbContextOptions<FullStackDBDemoContext> options)
             : base(options)
         {

@@ -14,7 +14,7 @@ namespace TimexServerApp.Models
         [MaxLength(100)]
         public string DepartmentName { get; set; }
 
-        [JsonIgnore]
+        [JsonIgnore] // Collection navigation
         public virtual ICollection<Employee> Employees { get; set; }
         public Department()
         {

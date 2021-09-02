@@ -1,3 +1,4 @@
+using AutoMapper;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -17,6 +18,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using TimexServerApp.DataAccess;
 using TimexServerApp.Extenions;
+using TimexServerApp.Mapper;
+using TimexServerApp.Repositories;
 
 namespace TimexServerApp
 {
@@ -41,12 +44,20 @@ namespace TimexServerApp
             //Entity Framework 
             services.AddDbContext<FullStackDBDemoContext>(option=>option.UseSqlServer(
                 Configuration["ConnectionStrings:EmployeeAppCon"]));
+            services.AddScoped<IFullStackDBDemoContext>(provider=> 
+                provider.GetService<FullStackDBDemoContext>());
+
+            // Add AutoMapper
+            services.AddAutoMapper(typeof(Startup));
+
+            //Add Data repositary
+            services.AddScoped<IDepartmentRepository, DepartmentRepository>();
+            services.AddScoped<IEmployeeRepository, EmployeeRepository>();
 
             // use JsonSerilizer
             //services.AddControllersWithViews().AddNewtonsoftJson(options =>
             //options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore)
             //    .AddNewtonsoftJson(options=>options.SerializerSettings.ContractResolver = new DefaultContractResolver());
-
 
             services.AddSwaggerGen(c =>
             {

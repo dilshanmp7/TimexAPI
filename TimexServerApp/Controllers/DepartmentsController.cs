@@ -3,12 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using TimexServerApp.DataAccess;
 using TimexServerApp.Models;
+using TimexServerApp.Repositories;
+using TimexServerApp.Responses;
 
 namespace TimexServerApp.Controllers
 {
@@ -17,37 +20,35 @@ namespace TimexServerApp.Controllers
     public class DepartmentsController : ControllerBase
     {
         private readonly ILogger<DepartmentsController> _logger;
-        private readonly FullStackDBDemoContext _context;
+        private readonly IDepartmentRepository _departmentRepository;
+        private readonly IMapper _imapper;
 
-        public DepartmentsController(ILogger<DepartmentsController> logger, FullStackDBDemoContext context)
+        public DepartmentsController(ILogger<DepartmentsController> logger, IDepartmentRepository departmentRepository, IMapper imapper)
         {
             _logger = logger;
-            _context = context;
+            _departmentRepository = departmentRepository;
+            _imapper = imapper;
         }
 
         // GET: api/Departments
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Department>>> GetDepartments()
+        public async Task<IActionResult> GetDepartments()
         {
             _logger.LogInformation($"Started meathod : {MethodBase.GetCurrentMethod().Name}");
-            return await _context.Departments.ToListAsync();
+            var departments = await _departmentRepository.Get();
+            var departmantResponses= _imapper.Map<IEnumerable<DepartmentResponse>>(departments);
+            return new JsonResult(departmantResponses);
         }
 
         // GET: api/Departments/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Department>> GetDepartment(int id)
+        public async Task<IActionResult> GetDepartment(int id)
         {
             _logger.LogInformation($"Start meathod : {MethodBase.GetCurrentMethod().Name}");
-            var department = await _context.Departments.FindAsync(id);
-
-            if (department == null)
-            {
-                var message = $"Department not existing with Id {id}";
-                _logger.LogError(message);
-                return NotFound(message);
-            }
+            var department = await _departmentRepository.Get(id);
+            var departmantResponse = _imapper.Map<IEnumerable<DepartmentResponse>>(department);
             _logger.LogInformation($"End meathod : {MethodBase.GetCurrentMethod().Name}");
-            return department;
+            return new JsonResult(departmantResponse);
         }
 
         // PUT: api/Departments/5
@@ -60,25 +61,7 @@ namespace TimexServerApp.Controllers
             {
                 return BadRequest();
             }
-
-            _context.Entry(department).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                if (!DepartmentExists(id))
-                {
-                    _logger.LogError(ex,ex.Message);
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            await _departmentRepository.Update(id, department);
             _logger.LogInformation($"End meathod : {MethodBase.GetCurrentMethod().Name}");
             return new JsonResult("Updated Successfully");
         }
@@ -86,11 +69,10 @@ namespace TimexServerApp.Controllers
         // POST: api/Departments
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Department>> PostDepartment(Department department)
+        public async Task<IActionResult> PostDepartment(Department department)
         {
             _logger.LogInformation($"Start meathod : {MethodBase.GetCurrentMethod().Name}");
-            _context.Departments.Add(department);
-            await _context.SaveChangesAsync();
+            await _departmentRepository.Add(department);
             _logger.LogInformation($"End meathod : {MethodBase.GetCurrentMethod().Name}");
             return CreatedAtAction("GetDepartment", new { id = department.DepartmentId }, department);
         }
@@ -100,22 +82,10 @@ namespace TimexServerApp.Controllers
         public async Task<IActionResult> DeleteDepartment(int id)
         {
             _logger.LogInformation($"Start meathod : {MethodBase.GetCurrentMethod().Name}");
-            var department = await _context.Departments.FindAsync(id);
-            if (department == null)
-            {
-                var message = $"Department not existing with Id {id}";
-                _logger.LogError(message);
-                return NotFound(message);
-            }
-            _context.Departments.Remove(department);
-            await _context.SaveChangesAsync();
+            await _departmentRepository.Delete(id);
             _logger.LogInformation($"End meathod : {MethodBase.GetCurrentMethod().Name}");
             return new JsonResult("Deleted Successfully.");
         }
 
-        private bool DepartmentExists(int id)
-        {
-            return _context.Departments.Any(e => e.DepartmentId == id);
-        }
     }
 }

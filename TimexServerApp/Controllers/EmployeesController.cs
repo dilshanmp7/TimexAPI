@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using AutoMapper;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -11,6 +12,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using TimexServerApp.DataAccess;
 using TimexServerApp.Models;
+using TimexServerApp.Repositories;
+using TimexServerApp.Responses;
 
 namespace TimexServerApp.Controllers
 {
@@ -19,39 +22,37 @@ namespace TimexServerApp.Controllers
     public class EmployeesController : ControllerBase
     {
         private readonly ILogger<EmployeesController> _logger;
-        private readonly FullStackDBDemoContext _context;
+        private readonly IEmployeeRepository _employeeRepository;
         private readonly IWebHostEnvironment _env;
+        private readonly IMapper _imapper;
 
-        public EmployeesController(ILogger<EmployeesController> logger,
-            FullStackDBDemoContext context,IWebHostEnvironment env)
+        public EmployeesController(ILogger<EmployeesController> logger,IEmployeeRepository employeeRepository, IWebHostEnvironment env, IMapper imapper)
         {
             _logger = logger;
-            _context = context;
+            _employeeRepository = employeeRepository;
             _env = env;
+            _imapper = imapper;
         }
 
         // GET: api/Employees
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Employee>>> GetEmployees()
+        public async Task<IActionResult> GetEmployees()
         {
             _logger.LogInformation($"Started meathod : {MethodBase.GetCurrentMethod().Name}");
-            return await _context.Employees.ToListAsync();
+            var employees = await _employeeRepository.Get();
+            var employeeResponse = _imapper.Map<IEnumerable<EmployeeResponse>>(employees);
+            return new JsonResult(employeeResponse);
         }
 
         // GET: api/Employees/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Employee>> GetEmployee(int id)
+        public async Task<IActionResult> GetEmployee(int id)
         {
             _logger.LogInformation($"Start meathod : {MethodBase.GetCurrentMethod().Name}");
-            var employee = await _context.Employees.FindAsync(id);
-            if (employee == null)
-            {
-                var message = $"Employee not existing with Id {id}";
-                _logger.LogError(message);
-                return NotFound(message);
-            }
+            var employee = await _employeeRepository.Get(id);
+            var employeeResponse = _imapper.Map<EmployeeResponse>(employee);
             _logger.LogInformation($"End meathod : {MethodBase.GetCurrentMethod().Name}");
-            return employee;
+            return new JsonResult(employeeResponse);
         }
 
         // PUT: api/Employees/5
@@ -64,25 +65,7 @@ namespace TimexServerApp.Controllers
             {
                 return BadRequest();
             }
-
-            _context.Entry(employee).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                if (!EmployeeExists(id))
-                {
-                    _logger.LogError(ex, ex.Message);
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            await _employeeRepository.Update(id, employee);
             _logger.LogInformation($"End meathod : {MethodBase.GetCurrentMethod().Name}");
             return new JsonResult("Updated Successfully");
         }
@@ -90,11 +73,10 @@ namespace TimexServerApp.Controllers
         // POST: api/Employees
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Employee>> PostEmployee(Employee employee)
+        public async Task<IActionResult> PostEmployee(Employee employee)
         {
             _logger.LogInformation($"Start meathod : {MethodBase.GetCurrentMethod().Name}");
-            _context.Employees.Add(employee);
-            await _context.SaveChangesAsync();
+            await _employeeRepository.Add(employee);
             _logger.LogInformation($"End meathod : {MethodBase.GetCurrentMethod().Name}");
             return CreatedAtAction("GetEmployee", new { id = employee.EmployeeId }, employee);
         }
@@ -104,16 +86,7 @@ namespace TimexServerApp.Controllers
         public async Task<IActionResult> DeleteEmployee(int id)
         {
             _logger.LogInformation($"Start meathod : {MethodBase.GetCurrentMethod().Name}");
-            var employee = await _context.Employees.FindAsync(id);
-            if (employee == null)
-            {
-                var message = $"Employee not existing with Id {id}";
-                _logger.LogError(message);
-                return NotFound(message);
-            }
-
-            _context.Employees.Remove(employee);
-            await _context.SaveChangesAsync();
+            await _employeeRepository.Delete(id);
             _logger.LogInformation($"End meathod : {MethodBase.GetCurrentMethod().Name}");
             return new JsonResult("Deleted Successfully.");
         }
@@ -141,10 +114,5 @@ namespace TimexServerApp.Controllers
             }
         }
 
-
-        private bool EmployeeExists(int id)
-        {
-            return _context.Employees.Any(e => e.EmployeeId == id);
-        }
     }
 }
