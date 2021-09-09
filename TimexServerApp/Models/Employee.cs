@@ -16,7 +16,7 @@ namespace TimexServerApp.Models
         // Foreign key
         public int? DepartmentId { get; set; }
         [Required]
-        public DateTime DateOfJoining { get; set; }
+        public DateTime? DateOfJoining { get; set; }
         public string PhotoFileName { get; set; }
         [ForeignKey("DepartmentId")]
         // Reference navigation

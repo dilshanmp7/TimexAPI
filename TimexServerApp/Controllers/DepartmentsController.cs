@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using TimexServerApp.DataAccess;
 using TimexServerApp.Models;
 using TimexServerApp.Repositories;
+using TimexServerApp.Requests;
 using TimexServerApp.Responses;
 
 namespace TimexServerApp.Controllers
@@ -21,13 +22,11 @@ namespace TimexServerApp.Controllers
     {
         private readonly ILogger<DepartmentsController> _logger;
         private readonly IDepartmentRepository _departmentRepository;
-        private readonly IMapper _imapper;
 
-        public DepartmentsController(ILogger<DepartmentsController> logger, IDepartmentRepository departmentRepository, IMapper imapper)
+        public DepartmentsController(ILogger<DepartmentsController> logger, IDepartmentRepository departmentRepository)
         {
             _logger = logger;
             _departmentRepository = departmentRepository;
-            _imapper = imapper;
         }
 
         // GET: api/Departments
@@ -35,33 +34,27 @@ namespace TimexServerApp.Controllers
         public async Task<IActionResult> GetDepartments()
         {
             _logger.LogInformation($"Started meathod : {MethodBase.GetCurrentMethod().Name}");
-            var departments = await _departmentRepository.Get();
-            var departmantResponses= _imapper.Map<IEnumerable<DepartmentResponse>>(departments);
+            var departmantResponses = await _departmentRepository.Get();
             return new JsonResult(departmantResponses);
         }
 
         // GET: api/Departments/5
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetDepartment(int id)
+        [HttpGet("{name}")]
+        public async Task<IActionResult> GetDepartment(string name)
         {
             _logger.LogInformation($"Start meathod : {MethodBase.GetCurrentMethod().Name}");
-            var department = await _departmentRepository.Get(id);
-            var departmantResponse = _imapper.Map<IEnumerable<DepartmentResponse>>(department);
+            var departmantResponse = await _departmentRepository.Get(name);
             _logger.LogInformation($"End meathod : {MethodBase.GetCurrentMethod().Name}");
             return new JsonResult(departmantResponse);
         }
 
         // PUT: api/Departments/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutDepartment(int id, Department department)
+        [HttpPut("{name}")]
+        public async Task<IActionResult> PutDepartment(string name, [FromBody] DepartmentRequest departmentRequest)
         {
             _logger.LogInformation($"Start meathod : {MethodBase.GetCurrentMethod().Name}");
-            if (id != department.DepartmentId)
-            {
-                return BadRequest();
-            }
-            await _departmentRepository.Update(id, department);
+            await _departmentRepository.Update(name, departmentRequest);
             _logger.LogInformation($"End meathod : {MethodBase.GetCurrentMethod().Name}");
             return new JsonResult("Updated Successfully");
         }
@@ -69,20 +62,20 @@ namespace TimexServerApp.Controllers
         // POST: api/Departments
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<IActionResult> PostDepartment(Department department)
+        public async Task<IActionResult> PostDepartment([FromBody]DepartmentRequest departmentRequest)
         {
             _logger.LogInformation($"Start meathod : {MethodBase.GetCurrentMethod().Name}");
-            await _departmentRepository.Add(department);
+            await _departmentRepository.Add(departmentRequest);
             _logger.LogInformation($"End meathod : {MethodBase.GetCurrentMethod().Name}");
-            return CreatedAtAction("GetDepartment", new { id = department.DepartmentId }, department);
+            return new JsonResult("Added Successfully");
         }
 
         // DELETE: api/Departments/5
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteDepartment(int id)
+        [HttpDelete("{name}")]
+        public async Task<IActionResult> DeleteDepartment(string name)
         {
             _logger.LogInformation($"Start meathod : {MethodBase.GetCurrentMethod().Name}");
-            await _departmentRepository.Delete(id);
+            await _departmentRepository.Delete(name);
             _logger.LogInformation($"End meathod : {MethodBase.GetCurrentMethod().Name}");
             return new JsonResult("Deleted Successfully.");
         }

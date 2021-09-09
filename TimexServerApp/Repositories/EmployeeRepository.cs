@@ -1,10 +1,13 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using TimexServerApp.DataAccess;
 using TimexServerApp.Models;
+using TimexServerApp.Requests;
+using TimexServerApp.Responses;
 
 namespace TimexServerApp.Repositories
 {
@@ -12,50 +15,60 @@ namespace TimexServerApp.Repositories
     {
 
         private readonly IFullStackDBDemoContext _context;
-        public EmployeeRepository(IFullStackDBDemoContext context)
+        private readonly IMapper _imapper;
+
+        public EmployeeRepository(IFullStackDBDemoContext context, IMapper imapper)
         {
             _context = context;
+            _imapper = imapper;
         }
 
-        public async Task Add(Employee employee)
+        public async Task Add(EmployeeRequest employeeRequest)
         {
+            var employee = _imapper.Map<Employee>(employeeRequest);
             await _context.Employees.AddAsync(employee);
             await _context.SaveChangesAsync();
         }
 
         public async Task Delete(int id)
         {
-            var existingItem = await Get(id);
-            if (existingItem is not null)
+            var employee = await _context.Employees.FindAsync(id);
+            if (employee is null)
             {
                 throw new NullReferenceException($"Employee does not existing with id :{id}");
             }
-            _context.Employees.Remove(existingItem);
+            _context.Employees.Remove(employee);
             await _context.SaveChangesAsync();
         }
 
-        public async Task<Employee> Get(int id)
+        public async Task<EmployeeResponse> Get(int id)
         {
-            return await _context.Employees.Include(e => e.Department).FirstOrDefaultAsync(d =>
-                d.EmployeeId == id);
+            var employee= await _context.Employees.Include(e => e.Department).FirstOrDefaultAsync(d => d.EmployeeId == id);
+            var employeeResponse = _imapper.Map<EmployeeResponse>(employee);
+            return employeeResponse;
         }
 
-        public async Task<IEnumerable<Employee>> Get()
+        public async Task<IEnumerable<EmployeeResponse>> Get()
         {
-            return await _context.Employees.Include(d=>d.Department).ToListAsync();
+            var employees= await _context.Employees.Include(d=>d.Department).ToListAsync();
+            var employeeResponses = _imapper.Map<IEnumerable<EmployeeResponse>>(employees);
+            return employeeResponses;
         }
 
-        public async Task Update(int id, Employee employee)
+        public async Task Update(int id, EmployeeRequest employeeRequest)
         {
-            var existingItem = await Get(id);
-            if (existingItem is not null)
+            var employee = await _context.Employees.Include(e => e.Department).FirstOrDefaultAsync(d => d.EmployeeId == id);
+            if (employee is null)
             {
                 throw new NullReferenceException($"Employee does not existing with id :{id}");
             }
-            existingItem.EmployeeName = employee.EmployeeName;
-            existingItem.DateOfJoining = employee.DateOfJoining;
-            existingItem.PhotoFileName = employee.PhotoFileName;
-            existingItem.DepartmentId = employee.DepartmentId;
+            employee.EmployeeName = employeeRequest.EmployeeName;
+            employee.DepartmentId = employeeRequest.DepartmentId;
+            if (employeeRequest.DateOfJoining is not null)
+                employee.DateOfJoining = employeeRequest.DateOfJoining;
+            if (employeeRequest.PhotoFileName is not null)
+                employee.PhotoFileName = employeeRequest.PhotoFileName;
+            await _context.SaveChangesAsync();
         }
     }
 }

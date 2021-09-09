@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace TimexServerApp.Responses
+namespace TimexServerApp.Requests
 {
-    public class DepartmentResponse
+    public class DepartmentRequest
     {
-        public int DepartmentId { get; set; }
+        [Required]
         public string DepartmentName { get; set; }
     }
 }
